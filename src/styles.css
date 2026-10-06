@@ -13,8 +13,8 @@ button { cursor: pointer; }
 .top-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; padding-top: 1rem; padding-bottom: 1rem; }
 .brand { display: flex; align-items: center; gap: .75rem; }
 .brand h1 { font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -.01em; }
-.logo { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 6px; background: #fff; overflow: hidden; }
-.logo img { display: block; width: 32px; height: auto; }
+.logo { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 6px; background: #fff; overflow: hidden; }
+.logo img { display: block; width: 48px; height: auto; }
 .search { position: relative; flex: 1 1 18rem; max-width: 24rem; }
 .search svg { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
 input[type="text"], input[type="search"], input[type="file"] { width: 100%; padding: .5rem .75rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
