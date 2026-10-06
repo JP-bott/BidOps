@@ -15,7 +15,58 @@ async function request(method, body) {
   if (!res.ok) throw new Error(json.error || 'Request failed.');
   return json;
 }
-const api = { get: () => request('GET'), put: (d) => request('PUT', d) };
+const LS_KEY = 'bidOpportunities.workingCopy.v1';
+let staticMode = false;
+
+function validate(d) {
+  if (!d || !Array.isArray(d.agencies) || !Array.isArray(d.keywords)) throw new Error('Data must contain "agencies" and "keywords" arrays.');
+  const urls = new Set(); const kws = new Set();
+  const agencies = d.agencies.map((a) => {
+    const name = typeof a?.name === 'string' ? a.name.trim() : '';
+    const url = typeof a?.url === 'string' ? a.url.trim() : '';
+    if (!name) throw new Error('Every agency needs a name.');
+    if (!isHttpUrl(url)) throw new Error(`"${name}" needs a URL starting with http:// or https://`);
+    if (urls.has(url.toLowerCase())) throw new Error(`Duplicate URL: ${url}`);
+    urls.add(url.toLowerCase());
+    return { id: typeof a.id === 'string' && a.id ? a.id : makeId(name, []), name, url };
+  });
+  const keywords = d.keywords.map((k) => {
+    const kw = typeof k === 'string' ? k.trim() : '';
+    if (!kw) throw new Error('Keywords must be non-empty text.');
+    if (kws.has(kw.toLowerCase())) throw new Error(`Duplicate keyword: ${kw}`);
+    kws.add(kw.toLowerCase());
+    return kw;
+  });
+  return { agencies, keywords };
+}
+
+// Uses the Express server when it exists. Otherwise (static hosting such as Vercel) it loads
+// /data.json and keeps edits in this browser only; Export JSON is how they are kept.
+const api = {
+  isStatic: () => staticMode,
+  async get() {
+    try {
+      const d = await request('GET');
+      if (!Array.isArray(d.agencies) || !Array.isArray(d.keywords)) throw new Error('not api');
+      staticMode = false;
+      return d;
+    } catch {
+      const res = await fetch('/data.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('missing');
+      const base = validate(await res.json());
+      staticMode = true;
+      try { const c = localStorage.getItem(LS_KEY); if (c) return validate(JSON.parse(c)); } catch { /* ignore bad copy */ }
+      return base;
+    }
+  },
+  async put(d) {
+    if (!staticMode) return request('PUT', d);
+    const clean = validate(d);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(clean)); } catch { /* storage unavailable */ }
+    return clean;
+  },
+  resetWorkingCopy: () => { try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ } },
+};
 
 const isHttpUrl = (s) => {
   try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; }
@@ -192,6 +243,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [isStatic, setIsStatic] = useState(false);
   const nextId = useRef(1);
 
   const toast = useCallback((message, type = 'success') => {
@@ -202,7 +254,7 @@ export default function App() {
 
   const load = useCallback(async () => {
     setStatus('loading');
-    try { setData(await api.get()); setStatus('ready'); } catch { setStatus('error'); }
+    try { setData(await api.get()); setIsStatic(api.isStatic()); setStatus('ready'); } catch { setStatus('error'); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -350,7 +402,15 @@ export default function App() {
         </div>
       </div>
 
-      <main id="main" role="tabpanel" className="wrap main">{content}</main>
+            <main id="main" role="tabpanel" className="wrap main">
+        {isStatic && status === 'ready' && (
+          <p className="notice" role="note">
+            Static mode: changes are saved in this browser only. Use Export JSON to keep them.{' '}
+            <button type="button" className="linkbtn" onClick={() => { api.resetWorkingCopy(); load(); }}>Discard local changes</button>
+          </p>
+        )}
+        {content}
+      </main>
       <footer className="foot">Built by John Paul Torres</footer>
 
       {modal?.type === 'agency' && (

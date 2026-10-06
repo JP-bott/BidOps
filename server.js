@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = path.join(root, 'data.json');
+const DATA_FILE = path.join(root, 'public', 'data.json');
 const PORT = Number(process.env.PORT) || 3000;
 const prod = process.argv.includes('--prod');
 
