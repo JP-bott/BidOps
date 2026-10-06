@@ -1,6 +1,6 @@
 # Bid Opportunities
 
-React (Vite) front end with a small Express server that reads and writes `data.json`.
+React (Vite) front end that reads `public/database.json` directly in the browser.
 
 ## Run (Node 18+ required)
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Changes are saved straight to `data.json`.
+Open http://localhost:3000. Changes are saved in the browser's local storage.
 
 ## Production
 
@@ -22,6 +22,7 @@ Export JSON / Import JSON are still available for backups.
 
 ## Static hosting (Vercel, GitHub Pages)
 
-No server is needed. The app loads `public/data.json`, keeps edits in the browser, and
-Export JSON saves them. To publish changes, replace `public/data.json` with the exported file.
+No data API server is needed. The app loads `public/database.json`, keeps edits in the
+browser, and Export JSON saves them. To publish changes, replace `public/database.json`
+with the exported file.
 On Vercel use the Vite preset (build command `npm run build`, output directory `dist`).

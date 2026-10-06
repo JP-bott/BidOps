@@ -4,19 +4,8 @@ import {
   Upload, Download, RefreshCw, TriangleAlert,
 } from 'lucide-react';
 
-/* ---------- API + helpers ---------- */
-async function request(method, body) {
-  const res = await fetch('/api/data', {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || 'Request failed.');
-  return json;
-}
 const LS_KEY = 'bidOpportunities.workingCopy.v1';
-let staticMode = false;
+const DATABASE_URL = '/database.json';
 
 function validate(d) {
   if (!d || !Array.isArray(d.agencies) || !Array.isArray(d.keywords)) throw new Error('Data must contain "agencies" and "keywords" arrays.');
@@ -40,27 +29,16 @@ function validate(d) {
   return { agencies, keywords };
 }
 
-// Uses the Express server when it exists. Otherwise (static hosting such as Vercel) it loads
-// /data.json and keeps edits in this browser only; Export JSON is how they are kept.
 const api = {
-  isStatic: () => staticMode,
+  isStatic: () => true,
   async get() {
-    try {
-      const d = await request('GET');
-      if (!Array.isArray(d.agencies) || !Array.isArray(d.keywords)) throw new Error('not api');
-      staticMode = false;
-      return d;
-    } catch {
-      const res = await fetch('/data.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error('missing');
-      const base = validate(await res.json());
-      staticMode = true;
-      try { const c = localStorage.getItem(LS_KEY); if (c) return validate(JSON.parse(c)); } catch { /* ignore bad copy */ }
-      return base;
-    }
+    const res = await fetch(DATABASE_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('missing');
+    const base = validate(await res.json());
+    try { const c = localStorage.getItem(LS_KEY); if (c) return validate(JSON.parse(c)); } catch { /* ignore bad copy */ }
+    return base;
   },
   async put(d) {
-    if (!staticMode) return request('PUT', d);
     const clean = validate(d);
     try { localStorage.setItem(LS_KEY, JSON.stringify(clean)); } catch { /* storage unavailable */ }
     return clean;
@@ -185,7 +163,7 @@ function ImportModal({ onSubmit, onClose }) {
   return (
     <Modal title="Import JSON" onClose={onClose}>
       <form onSubmit={submit}>
-        <p className="muted">Choose a previously exported data.json. It replaces the current agencies and keywords.</p>
+        <p className="muted">Choose a previously exported database.json. It replaces the current agencies and keywords.</p>
         <div className="field">
           <label htmlFor="import-file">JSON file</label>
           <input id="import-file" type="file" accept=".json,application/json" onChange={pick} />
@@ -258,10 +236,10 @@ export default function App() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Persist to data.json through the server. Returns an error message or null.
+  // Persist changes in this browser. Export JSON publishes a new database file.
   const save = async (next, message) => {
     try { setData(await api.put(next)); toast(message); return null; }
-    catch (e) { return e instanceof TypeError ? 'Cannot reach the server.' : e.message || 'Could not save changes.'; }
+    catch (e) { return e.message || 'Could not save changes.'; }
   };
   const run = async (promise) => { const err = await promise; if (err) toast(err, 'error'); };
 
@@ -288,7 +266,7 @@ export default function App() {
     const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'data.json';
+    a.href = url; a.download = 'database.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('JSON exported successfully');
@@ -309,7 +287,7 @@ export default function App() {
       <div className="error-box" role="alert">
         <TriangleAlert size={32} />
         <p><strong>Unable to load procurement data.</strong></p>
-        <p className="muted">Check that data.json exists and is accessible.</p>
+        <p className="muted">Check that database.json exists and is accessible.</p>
         <button type="button" className="btn btn-primary" onClick={load}><RefreshCw size={16} />Retry</button>
       </div>
     );
@@ -405,7 +383,7 @@ export default function App() {
             <main id="main" role="tabpanel" className="wrap main">
         {isStatic && status === 'ready' && (
           <p className="notice" role="note">
-            Static mode: changes are saved in this browser only. Use Export JSON to keep them.{' '}
+            Changes are saved in this browser only. Use Export JSON to keep them.{' '}
             <button type="button" className="linkbtn" onClick={() => { api.resetWorkingCopy(); load(); }}>Discard local changes</button>
           </p>
         )}
