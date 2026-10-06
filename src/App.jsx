@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Landmark, Search, ExternalLink, Plus, Pencil, Trash2, Copy, Check, X,
+  Search, ExternalLink, Plus, Pencil, Trash2, Copy, Check, X,
   Upload, Download, RefreshCw, TriangleAlert,
 } from 'lucide-react';
 
@@ -352,7 +352,7 @@ export default function App() {
       <header className="top">
         <div className="wrap top-row">
           <div className="brand">
-            <div className="logo"><Landmark size={20} /></div>
+            <div className="logo"><img src="/img/logo.png" alt="" /></div>
             <div><h1>Bid Opportunities</h1><p className="muted small">Government Procurement Dashboard</p></div>
           </div>
           <div className="search">
