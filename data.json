@@ -13,23 +13,9 @@
     { "id": "psa", "name": "PSA", "url": "https://procurement.psa.gov.ph/invitationbid/" }
   ],
   "keywords": [
-    "Data Analytics",
-    "Data Science",
-    "Business Integration",
-    "Data Visualization",
-    "Data Integration",
-    "Various Software",
-    "Power BI",
-    "Business Intelligence",
-    "Advanced Analytics",
-    "Cloud Services",
-    "Artificial Intelligence",
-    "Software License",
-    "Software Subscription",
-    "Video Conferencing",
-    "Zoom",
-    "Data Warehouse",
-    "Canva",
-    "Codex"
+    "Data Analytics", "Data Science", "Business Integration", "Data Visualization", "Data Integration",
+    "Various Software", "Power BI", "Business Intelligence", "Advanced Analytics", "Cloud Services",
+    "Artificial Intelligence", "Software License", "Software Subscription", "Video Conferencing", "Zoom",
+    "Data Warehouse", "Canva", "Codex"
   ]
 }
