@@ -4,8 +4,7 @@ import {
   Upload, Download, RefreshCw, TriangleAlert,
 } from 'lucide-react';
 
-const LS_KEY = 'bidOpportunities.workingCopy.v1';
-const DATABASE_URL = '/database.json';
+const DATABASE_URL = '/api/data';
 
 function validate(d) {
   if (!d || !Array.isArray(d.agencies) || !Array.isArray(d.keywords)) throw new Error('Data must contain "agencies" and "keywords" arrays.');
@@ -30,20 +29,23 @@ function validate(d) {
 }
 
 const api = {
-  isStatic: () => true,
   async get() {
     const res = await fetch(DATABASE_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('missing');
-    const base = validate(await res.json());
-    try { const c = localStorage.getItem(LS_KEY); if (c) return validate(JSON.parse(c)); } catch { /* ignore bad copy */ }
-    return base;
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'Could not load data.');
+    return validate(body);
   },
   async put(d) {
     const clean = validate(d);
-    try { localStorage.setItem(LS_KEY, JSON.stringify(clean)); } catch { /* storage unavailable */ }
-    return clean;
+    const res = await fetch(DATABASE_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clean),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'Could not save changes.');
+    return validate(body);
   },
-  resetWorkingCopy: () => { try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ } },
 };
 
 const isHttpUrl = (s) => {
@@ -233,7 +235,6 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [toasts, setToasts] = useState([]);
-  const [isStatic, setIsStatic] = useState(false);
   const nextId = useRef(1);
 
   const toast = useCallback((message, type = 'success') => {
@@ -244,11 +245,10 @@ export default function App() {
 
   const load = useCallback(async () => {
     setStatus('loading');
-    try { setData(await api.get()); setIsStatic(api.isStatic()); setStatus('ready'); } catch { setStatus('error'); }
+    try { setData(await api.get()); setStatus('ready'); } catch { setStatus('error'); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Persist changes in this browser. Export JSON publishes a new database file.
   const save = async (next, message) => {
     try { setData(await api.put(next)); setSuccessMessage(message); return null; }
     catch (e) { return e.message || 'Could not save changes.'; }
@@ -299,7 +299,7 @@ export default function App() {
       <div className="error-box" role="alert">
         <TriangleAlert size={32} />
         <p><strong>Unable to load procurement data.</strong></p>
-        <p className="muted">Check that database.json exists and is accessible.</p>
+        <p className="muted">Check that the SQLite database is accessible.</p>
         <button type="button" className="btn btn-primary" onClick={load}><RefreshCw size={16} />Retry</button>
       </div>
     );
@@ -392,13 +392,7 @@ export default function App() {
         </div>
       </div>
 
-            <main id="main" role="tabpanel" className="wrap main">
-        {isStatic && status === 'ready' && (
-          <p className="notice" role="note">
-            Changes are saved in this browser only. Use Export JSON to keep them.{' '}
-            <button type="button" className="linkbtn" onClick={() => { api.resetWorkingCopy(); load(); }}>Discard local changes</button>
-          </p>
-        )}
+      <main id="main" role="tabpanel" className="wrap main">
         {content}
       </main>
       <footer className="foot">Built by John Paul Torres</footer>

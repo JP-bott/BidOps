@@ -1,6 +1,6 @@
 # Bid Opportunities
 
-React (Vite) front end that reads `public/database.json` directly in the browser.
+React (Vite) front end backed by a local SQLite database through the Express API.
 
 ## Run (Node 18+ required)
 
@@ -9,7 +9,8 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Changes are saved in the browser's local storage.
+Open http://localhost:3000. Changes are saved in `data/bidops.sqlite`; no separate
+database server is required.
 
 ## Production
 
@@ -18,11 +19,14 @@ npm run build
 npm start
 ```
 
-Export JSON / Import JSON are still available for backups.
+Export JSON / Import JSON are available for backups. On first run, the SQLite
+database is seeded from `data/seed.json`.
 
-## Static hosting (Vercel, GitHub Pages)
+## Database location
 
-No data API server is needed. The app loads `public/database.json`, keeps edits in the
-browser, and Export JSON saves them. To publish changes, replace `public/database.json`
-with the exported file.
-On Vercel use the Vite preset (build command `npm run build`, output directory `dist`).
+The database path defaults to `data/bidops.sqlite`. Set `DATABASE_PATH` to use a
+different SQLite file:
+
+```
+DATABASE_PATH=/path/to/bidops.sqlite npm start
+```
