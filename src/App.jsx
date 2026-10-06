@@ -281,7 +281,7 @@ export default function App() {
     a.href = url; a.download = 'database.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('JSON exported successfully');
+    setSuccessMessage('JSON exported successfully');
   };
 
   const q = query.trim().toLowerCase();
