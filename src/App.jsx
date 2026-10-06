@@ -136,6 +136,17 @@ function ConfirmModal({ title, message, onConfirm, onClose }) {
   );
 }
 
+function SuccessModal({ message, onClose }) {
+  return (
+    <Modal title="Action successful" onClose={onClose}>
+      <p className="muted">{message}</p>
+      <div className="actions">
+        <button type="button" className="btn btn-primary" data-autofocus onClick={onClose}>OK</button>
+      </div>
+    </Modal>
+  );
+}
+
 function ImportModal({ onSubmit, onClose }) {
   const [parsed, setParsed] = useState(null);
   const [info, setInfo] = useState({ text: '', bad: false });
@@ -220,6 +231,7 @@ export default function App() {
   const [tab, setTab] = useState('agencies');
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   const [toasts, setToasts] = useState([]);
   const [isStatic, setIsStatic] = useState(false);
   const nextId = useRef(1);
@@ -238,7 +250,7 @@ export default function App() {
 
   // Persist changes in this browser. Export JSON publishes a new database file.
   const save = async (next, message) => {
-    try { setData(await api.put(next)); toast(message); return null; }
+    try { setData(await api.put(next)); setSuccessMessage(message); return null; }
     catch (e) { return e.message || 'Could not save changes.'; }
   };
   const run = async (promise) => { const err = await promise; if (err) toast(err, 'error'); };
@@ -410,6 +422,7 @@ export default function App() {
       )}
       {modal?.type === 'confirm' && <ConfirmModal title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={closeModal} />}
       {modal?.type === 'import' && <ImportModal onClose={closeModal} onSubmit={(obj) => save(obj, 'JSON imported successfully')} />}
+      {successMessage && <SuccessModal message={successMessage} onClose={() => setSuccessMessage('')} />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (<div key={t.id} className={`toast ${t.type}`} role={t.type === 'error' ? 'alert' : 'status'}>{t.message}</div>))}
