@@ -10,7 +10,8 @@
     { "id": "nmis", "name": "NMIS", "url": "https://nmis.gov.ph/bids-notices-and-invitation/" },
     { "id": "opapru", "name": "OPAPRU", "url": "https://peace.gov.ph/procurement-opportunities/" },
     { "id": "philfida", "name": "PhilFIDA", "url": "https://philfida.da.gov.ph/bids-and-awards-2026/" },
-    { "id": "psa", "name": "PSA", "url": "https://procurement.psa.gov.ph/invitationbid/" }
+    { "id": "psa", "name": "PSA", "url": "https://procurement.psa.gov.ph/invitationbid/" },
+    { "id": "bsp", "name": "BSP", "url": "https://www.bsp.gov.ph/SitePages/Procurement/Procurement.aspx" }
   ],
   "keywords": [
     "Data Analytics", "Data Science", "Business Integration", "Data Visualization", "Data Integration",
