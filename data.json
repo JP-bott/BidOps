@@ -1,0 +1,35 @@
+{
+  "agencies": [
+    { "id": "philgeps", "name": "PhilGEPS", "url": "https://notices.philgeps.gov.ph/GEPS/log-in.aspx" },
+    { "id": "doe", "name": "DOE", "url": "https://doe.gov.ph/news-and-events/bids-and-notices/bid-opportunities" },
+    { "id": "dswd", "name": "DSWD", "url": "https://procurement.dswd.gov.ph/" },
+    { "id": "qc-hall", "name": "QC HALL", "url": "https://quezoncity.gov.ph/public-notices/procurement/" },
+    { "id": "bafe", "name": "BAFE", "url": "https://bafe.gov.ph/bid-supplement/" },
+    { "id": "dilg", "name": "DILG", "url": "https://ncr.dilg.gov.ph/bac-corner/" },
+    { "id": "nfa", "name": "NFA", "url": "https://nfaweb.nfa.gov.ph/webapp/bac/EBPS.nsf/$ViewTemplateAll?OpenForm" },
+    { "id": "nmis", "name": "NMIS", "url": "https://nmis.gov.ph/bids-notices-and-invitation/" },
+    { "id": "opapru", "name": "OPAPRU", "url": "https://peace.gov.ph/procurement-opportunities/" },
+    { "id": "philfida", "name": "PhilFIDA", "url": "https://philfida.da.gov.ph/bids-and-awards-2026/" },
+    { "id": "psa", "name": "PSA", "url": "https://procurement.psa.gov.ph/invitationbid/" }
+  ],
+  "keywords": [
+    "Data Analytics",
+    "Data Science",
+    "Business Integration",
+    "Data Visualization",
+    "Data Integration",
+    "Various Software",
+    "Power BI",
+    "Business Intelligence",
+    "Advanced Analytics",
+    "Cloud Services",
+    "Artificial Intelligence",
+    "Software License",
+    "Software Subscription",
+    "Video Conferencing",
+    "Zoom",
+    "Data Warehouse",
+    "Canva",
+    "Codex"
+  ]
+}
