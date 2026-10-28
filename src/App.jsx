@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, ExternalLink, Plus, Pencil, Trash2, Copy, Check, X,
-  Upload, Download, RefreshCw, TriangleAlert,
+  Upload, Download, RefreshCw, TriangleAlert, Sun, Moon, Globe2, Hash, ArrowUpRight, Database, Keyboard,
 } from 'lucide-react';
 
 const DATABASE_URL = '/api/data';
@@ -127,12 +127,27 @@ function FormModal({ title, fields, submitLabel, onSubmit, onClose }) {
 }
 
 function ConfirmModal({ title, message, onConfirm, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const confirm = async () => {
+    setBusy(true);
+    try {
+      const result = await onConfirm();
+      if (result) setError(result);
+      else onClose();
+    } catch (err) {
+      setError(err.message || 'Unable to delete this item.');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <Modal title={title} onClose={onClose}>
       <p className="muted">{message}</p>
+      {error && <p className="form-error" role="alert">{error}</p>}
       <div className="actions">
-        <button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn btn-danger" data-autofocus onClick={async () => { await onConfirm(); onClose(); }}>Delete</button>
+        <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+        <button type="button" className="btn btn-danger" data-autofocus disabled={busy} onClick={confirm}>{busy ? 'Deleting...' : 'Delete'}</button>
       </div>
     </Modal>
   );
@@ -213,14 +228,18 @@ function AgencyCard({ agency, onEdit, onDelete }) {
   return (
     <li className="card">
       <button type="button" className="card-main" aria-label={`Open ${agency.name} in a new tab`} onClick={() => openUrl(agency.url)}>
-        <span className="card-top"><strong>{agency.name}</strong><ExternalLink size={16} /></span>
-        <span className="muted small">Government Procurement</span>
-        <span className="host">{hostOf(agency.url)}</span>
+        <span className="card-top">
+          <span className="agency-icon" aria-hidden="true">{agency.name.trim().slice(0, 2).toUpperCase()}</span>
+          <span className="card-open-icon"><ArrowUpRight size={18} /></span>
+        </span>
+        <span className="card-title">{agency.name}</span>
+        <span className="card-category">Government procurement</span>
+        <span className="host"><Globe2 size={13} />{hostOf(agency.url)}</span>
       </button>
       <div className="card-actions">
-        <button type="button" onClick={() => openUrl(agency.url)}><ExternalLink size={14} />Open</button>
-        <button type="button" onClick={onEdit}><Pencil size={14} />Edit</button>
-        <button type="button" className="danger" onClick={onDelete}><Trash2 size={14} />Delete</button>
+        <button type="button" onClick={() => openUrl(agency.url)}><ExternalLink size={14} />Visit website</button>
+        <button type="button" aria-label={`Edit ${agency.name}`} title={`Edit ${agency.name}`} onClick={onEdit}><Pencil size={15} /></button>
+        <button type="button" className="danger" aria-label={`Delete ${agency.name}`} title={`Delete ${agency.name}`} onClick={onDelete}><Trash2 size={15} /></button>
       </div>
     </li>
   );
@@ -235,7 +254,26 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [toasts, setToasts] = useState([]);
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+  const searchRef = useRef(null);
   const nextId = useRef(1);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { window.localStorage.setItem('bidops-theme', theme); } catch { /* Storage may be unavailable. */ }
+  }, [theme]);
+
+  useEffect(() => {
+    const onShortcut = (event) => {
+      if (modal || event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      const tag = event.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [modal]);
 
   const toast = useCallback((message, type = 'success') => {
     const id = nextId.current++;
@@ -253,7 +291,6 @@ export default function App() {
     try { setData(await api.put(next)); setSuccessMessage(message); return null; }
     catch (e) { return e.message || 'Could not save changes.'; }
   };
-  const run = async (promise) => { const err = await promise; if (err) toast(err, 'error'); };
 
   const saveAgency = (existing, v) => {
     const name = v.name.trim(); const url = v.url.trim();
@@ -299,7 +336,7 @@ export default function App() {
       <div className="error-box" role="alert">
         <TriangleAlert size={32} />
         <p><strong>Unable to load procurement data.</strong></p>
-        <p className="muted">Check that the SQLite database is accessible.</p>
+        <p className="muted">Check your connection or database configuration and try again.</p>
         <button type="button" className="btn btn-primary" onClick={load}><RefreshCw size={16} />Retry</button>
       </div>
     );
@@ -307,8 +344,8 @@ export default function App() {
     content = (
       <>
         <div className="section-head">
-          <div><h2>Procurement sources</h2><p className="muted small">{agencies.length} of {data.agencies.length} shown</p></div>
-          <button type="button" className="btn btn-primary" onClick={() => setModal({ type: 'agency', item: null })}><Plus size={16} />Add Agency</button>
+          <div><span className="section-eyebrow">SOURCE DIRECTORY</span><h2>Procurement sources</h2><p className="muted small">{agencies.length} of {data.agencies.length} sources shown</p></div>
+          <button type="button" className="btn btn-primary" onClick={() => setModal({ type: 'agency', item: null })}><Plus size={16} />Add source</button>
         </div>
         {!data.agencies.length ? empty('No agencies found.', 'Add your first procurement source.')
           : !agencies.length ? empty('No matching agencies.', `Nothing matches "${query.trim()}".`)
@@ -320,7 +357,7 @@ export default function App() {
                   onEdit={() => setModal({ type: 'agency', item: a })}
                   onDelete={() => setModal({
                     type: 'confirm', title: 'Delete Agency?', message: `Are you sure you want to delete ${a.name}?`,
-                    onConfirm: () => run(save({ ...data, agencies: data.agencies.filter((x) => x.id !== a.id) }, 'Agency deleted successfully')),
+                    onConfirm: () => save({ ...data, agencies: data.agencies.filter((x) => x.id !== a.id) }, 'Agency deleted successfully'),
                   })}
                 />
               ))}
@@ -332,8 +369,8 @@ export default function App() {
     content = (
       <>
         <div className="section-head">
-          <div><h2>Search keywords</h2><p className="muted small">{keywords.length} of {data.keywords.length} shown</p></div>
-          <button type="button" className="btn btn-primary" onClick={() => setModal({ type: 'keyword', item: null })}><Plus size={16} />Add Keyword</button>
+          <div><span className="section-eyebrow">SEARCH LIBRARY</span><h2>PhilGEPS search keywords</h2><p className="muted small">{keywords.length} of {data.keywords.length} keywords shown</p></div>
+          <button type="button" className="btn btn-primary" onClick={() => setModal({ type: 'keyword', item: null })}><Plus size={16} />Add keyword</button>
         </div>
         {!data.keywords.length ? empty('No keywords found.', 'Add a PhilGEPS search keyword.')
           : !keywords.length ? empty('No matching keywords.', `Nothing matches "${query.trim()}".`)
@@ -341,14 +378,14 @@ export default function App() {
             <ul className="kw-grid">
               {keywords.map((k) => (
                 <li className="kw" key={k}>
-                  <span className="kw-text">{k}</span>
+                  <span className="kw-name"><span className="keyword-symbol"><Hash size={16} /></span><span className="kw-text">{k}</span></span>
                   <div className="kw-actions">
                     <CopyButton text={k} onCopied={() => toast('Copied to clipboard')} onFail={() => toast('Copy failed. Select the text and copy it manually.', 'error')} />
                     <button type="button" className="iconbtn" aria-label={`Edit ${k}`} title={`Edit ${k}`} onClick={() => setModal({ type: 'keyword', item: k })}><Pencil size={16} /></button>
                     <button type="button" className="iconbtn danger" aria-label={`Delete ${k}`} title={`Delete ${k}`}
                       onClick={() => setModal({
                         type: 'confirm', title: 'Delete Keyword?', message: `Are you sure you want to delete "${k}"?`,
-                        onConfirm: () => run(save({ ...data, keywords: data.keywords.filter((x) => x !== k) }, 'Keyword deleted successfully')),
+                        onConfirm: () => save({ ...data, keywords: data.keywords.filter((x) => x !== k) }, 'Keyword deleted successfully'),
                       })}><Trash2 size={16} /></button>
                   </div>
                 </li>
@@ -365,37 +402,87 @@ export default function App() {
         <div className="wrap top-row">
           <div className="brand">
             <div className="logo"><img src="/img/logo.png?v=2" alt="" /></div>
-            <div><h1>Bid Opportunities</h1><p className="muted small">Government Procurement Dashboard</p></div>
+            <div className="brand-copy">
+              <span className="brand-title">BidOps<span className="brand-period">.</span></span>
+              <span className="brand-subtitle">Procurement workspace</span>
+            </div>
           </div>
-          <div className="search">
-            <label htmlFor="search" className="sr-only">Search</label>
-            <Search size={16} />
-            <input id="search" type="search" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder={tab === 'agencies' ? 'Search agencies by name or URL...' : 'Search keywords...'} />
+          <div className="header-tools">
+            <span className={`connection-pill ${status === 'error' ? 'disconnected' : ''}`} role="status">
+              <span className="connection-dot" aria-hidden="true" />
+              {status === 'ready' ? 'Data connected' : status === 'error' ? 'Connection issue' : 'Connecting'}
+            </span>
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
+              aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+              title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              <span>{theme === 'light' ? 'Dark mode' : 'Light mode'}</span>
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="tabbar">
-        <div className="wrap tabbar-row">
+      <section className="intro-wrap" aria-label="Workspace overview">
+        <div className="wrap">
+          <div className="hero">
+            <div className="hero-copy">
+              <span className="hero-eyebrow"><span className="hero-eyebrow-dot" /> YOUR PROCUREMENT DESK</span>
+              <h1>One place for every<br /><span>procurement source.</span></h1>
+              <p>Organize government procurement portals and keep your essential PhilGEPS search terms ready whenever opportunities arise.</p>
+              <span className="hero-caption"><Database size={14} /> Your sources and keywords, organized</span>
+            </div>
+            <div className="hero-metrics">
+              <div className="hero-metric">
+                <div className="metric-top"><Globe2 size={18} /><span>DIRECTORY</span></div>
+                <strong>{data.agencies.length.toString().padStart(2, '0')}</strong>
+                <span>Procurement sources</span>
+              </div>
+              <div className="hero-metric">
+                <div className="metric-top"><Hash size={18} /><span>DISCOVERY</span></div>
+                <strong>{data.keywords.length.toString().padStart(2, '0')}</strong>
+                <span>Search keywords</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="wrap workspace">
+        <div className="workspace-nav">
           <div role="tablist" aria-label="Sections" className="tabs">
-            {[['agencies', 'Bid Opportunities', data.agencies.length], ['keywords', 'PhilGEPS Keywords', data.keywords.length]].map(([id, label, n]) => (
+            {[
+              ['agencies', 'Bid opportunities', data.agencies.length, Globe2],
+              ['keywords', 'PhilGEPS keywords', data.keywords.length, Hash],
+            ].map(([id, label, n, Icon]) => (
               <button key={id} type="button" role="tab" id={`tab-${id}`} aria-selected={tab === id} aria-controls="main" className="tab" onClick={() => setTab(id)}>
-                {label}<span className="count">{n}</span>
+                <Icon size={17} /><span>{label}</span><span className="count">{n}</span>
               </button>
             ))}
           </div>
           <div className="tools" role="group" aria-label="Data management">
-            <button type="button" className="btn" onClick={() => setModal({ type: 'import' })}><Upload size={16} />Import JSON</button>
-            <button type="button" className="btn" onClick={exportJson} disabled={status !== 'ready'}><Download size={16} />Export JSON</button>
+            <button type="button" className="btn" onClick={() => setModal({ type: 'import' })}><Upload size={16} />Import <span className="hide-mobile">JSON</span></button>
+            <button type="button" className="btn" onClick={exportJson} disabled={status !== 'ready'}><Download size={16} />Export <span className="hide-mobile">JSON</span></button>
           </div>
         </div>
+        <div className="workspace-searchbar">
+          <div className="search">
+            <label htmlFor="search" className="sr-only">Search</label>
+            <Search size={18} />
+            <input ref={searchRef} id="search" type="search" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder={tab === 'agencies' ? 'Search agencies by name or website...' : 'Find a keyword...'} />
+            {query && <button type="button" className="clear-search" aria-label="Clear search" onClick={() => setQuery('')}><X size={15} /></button>}
+          </div>
+          <span className="shortcut-hint"><Keyboard size={15} /> Press <kbd>/</kbd> to search</span>
+        </div>
+        <main id="main" role="tabpanel" aria-labelledby={`tab-${tab}`} className="main">
+          {content}
+        </main>
       </div>
-
-      <main id="main" role="tabpanel" className="wrap main">
-        {content}
-      </main>
-      <footer className="foot">Built by John Paul Torres</footer>
+      <footer className="foot"><div className="wrap foot-inner"><span>© {new Date().getFullYear()} BidOps</span><span>Built by John Paul Torres</span></div></footer>
 
       {modal?.type === 'agency' && (
         <FormModal

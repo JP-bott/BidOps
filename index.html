@@ -3,8 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/img/logo.svg?v=4" />
-    <title>Bid Opportunities</title>
+    <meta name="theme-color" content="#f5f7fb" />
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
+    <title>BidOps | Procurement Workspace</title>
+    <script>
+      (function () {
+        var theme;
+        try { theme = localStorage.getItem('bidops-theme'); } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
