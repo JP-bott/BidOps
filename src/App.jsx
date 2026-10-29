@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, ExternalLink, Plus, Pencil, Trash2, Copy, Check, X,
-  Upload, Download, RefreshCw, TriangleAlert, Sun, Moon, Globe2, Hash, ArrowUpRight, Database, Keyboard,
+  Upload, Download, RefreshCw, TriangleAlert, Sun, Moon, Globe2, Hash, ArrowUpRight, Keyboard,
 } from 'lucide-react';
 
 const DATABASE_URL = '/api/data';
@@ -443,31 +443,6 @@ export default function App() {
           </div>
         </div>
       </header>
-
-      <section className="intro-wrap" aria-label="Workspace overview">
-        <div className="wrap">
-          <div className="hero">
-            <div className="hero-copy">
-              <span className="hero-eyebrow"><span className="hero-eyebrow-dot" /> YOUR PROCUREMENT DESK</span>
-              <h1>One place for every<br /><span>procurement source.</span></h1>
-              <p>Organize government procurement portals and keep your essential PhilGEPS search terms ready whenever opportunities arise.</p>
-              <span className="hero-caption"><Database size={14} /> Your sources and keywords, organized</span>
-            </div>
-            <div className="hero-metrics">
-              <div className="hero-metric">
-                <div className="metric-top"><Globe2 size={18} /><span>DIRECTORY</span></div>
-                <strong>{data.agencies.length.toString().padStart(2, '0')}</strong>
-                <span>Procurement sources</span>
-              </div>
-              <div className="hero-metric">
-                <div className="metric-top"><Hash size={18} /><span>DISCOVERY</span></div>
-                <strong>{data.keywords.length.toString().padStart(2, '0')}</strong>
-                <span>Search keywords</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <div className="wrap workspace">
         <div className="workspace-nav">
