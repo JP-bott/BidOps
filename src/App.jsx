@@ -25,27 +25,28 @@ function validate(d) {
     kws.add(kw.toLowerCase());
     return kw;
   });
-  return { agencies, keywords };
+  return { agencies, keywords, revision: Number.isSafeInteger(d.revision) ? d.revision : 0 };
 }
 
 const api = {
-  async get() {
-    const res = await fetch(DATABASE_URL, { cache: 'no-store' });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error || 'Could not load data.');
-    return validate(body);
-  },
-  async put(d) {
-    const clean = validate(d);
-    const res = await fetch(DATABASE_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(clean),
+  async request(method = 'GET', payload) {
+    const key = method === 'GET' ? '' : (sessionStorage.getItem('bidops-edit-key') || '');
+    const response = await fetch(DATABASE_URL, {
+      method, cache: 'no-store',
+      headers: { ...(payload ? { 'Content-Type': 'application/json' } : {}), ...(key ? { 'x-bidops-write-key': key } : {}) },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error || 'Could not save changes.');
-    return validate(body);
+    let result;
+    try { result = await response.json(); } catch { throw new Error('The database returned an invalid response.'); }
+    if (!response.ok) {
+      const error = new Error(result.error || 'Database operation failed.');
+      error.status = response.status;
+      throw error;
+    }
+    return validate(result);
   },
+  get() { return this.request('GET'); },
+  mutate(method, payload) { return this.request(method, payload); },
 };
 
 const isHttpUrl = (s) => {
@@ -247,7 +248,7 @@ function AgencyCard({ agency, onEdit, onDelete }) {
 
 /* ---------- App ---------- */
 export default function App() {
-  const [data, setData] = useState({ agencies: [], keywords: [] });
+  const [data, setData] = useState({ agencies: [], keywords: [], revision: 0 });
   const [status, setStatus] = useState('loading');
   const [tab, setTab] = useState('agencies');
   const [query, setQuery] = useState('');
@@ -287,28 +288,45 @@ export default function App() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const save = async (next, message) => {
-    try { setData(await api.put(next)); setSuccessMessage(message); return null; }
-    catch (e) { return e.message || 'Could not save changes.'; }
+  const [editKey, setEditKey] = useState(() => {
+    try { return sessionStorage.getItem('bidops-edit-key') || ''; } catch { return ''; }
+  });
+  const changeEditKey = (value) => {
+    setEditKey(value);
+    try {
+      if (value) sessionStorage.setItem('bidops-edit-key', value);
+      else sessionStorage.removeItem('bidops-edit-key');
+    } catch {}
   };
 
+  const save = async (method, payload, message) => {
+    try {
+      const fresh = await api.mutate(method, payload);
+      setData(fresh);
+      setSuccessMessage(message);
+      return null;
+    } catch (error) {
+      if (error.status === 409) {
+        try { setData(await api.get()); } catch {}
+      }
+      return error.message || 'Could not save changes.';
+    }
+  };
   const saveAgency = (existing, v) => {
     const name = v.name.trim(); const url = v.url.trim();
     if (!name) return 'Agency name is required.';
-    if (!url) return 'URL is required.';
-    if (!isHttpUrl(url)) return 'Enter a URL starting with http:// or https://';
-    if (data.agencies.some((a) => a.id !== existing?.id && a.url.toLowerCase() === url.toLowerCase())) return 'An agency with this URL already exists.';
-    const agencies = existing
-      ? data.agencies.map((a) => (a.id === existing.id ? { ...a, name, url } : a))
-      : [...data.agencies, { id: makeId(name, data.agencies), name, url }];
-    return save({ ...data, agencies }, existing ? 'Agency updated successfully' : 'Agency added successfully');
+    if (!url || !isHttpUrl(url)) return 'Enter a URL starting with http:// or https://';
+    return save(existing ? 'PATCH' : 'POST', {
+      entity: 'agency', name, url,
+      ...(existing ? { id: existing.id, original: existing } : {}),
+    }, existing ? 'Agency updated successfully' : 'Agency added successfully');
   };
   const saveKeyword = (existing, v) => {
-    const kw = v.kw.trim();
-    if (!kw) return 'Keyword is required.';
-    if (data.keywords.some((k) => k !== existing && k.toLowerCase() === kw.toLowerCase())) return 'This keyword already exists.';
-    const keywords = existing ? data.keywords.map((k) => (k === existing ? kw : k)) : [...data.keywords, kw];
-    return save({ ...data, keywords }, existing ? 'Keyword updated successfully' : 'Keyword added successfully');
+    const value = v.kw.trim();
+    if (!value) return 'Keyword is required.';
+    return save(existing ? 'PATCH' : 'POST', {
+      entity: 'keyword', value, ...(existing ? { oldValue: existing } : {}),
+    }, existing ? 'Keyword updated successfully' : 'Keyword added successfully');
   };
 
   const exportJson = () => {
@@ -357,7 +375,7 @@ export default function App() {
                   onEdit={() => setModal({ type: 'agency', item: a })}
                   onDelete={() => setModal({
                     type: 'confirm', title: 'Delete Agency?', message: `Are you sure you want to delete ${a.name}?`,
-                    onConfirm: () => save({ ...data, agencies: data.agencies.filter((x) => x.id !== a.id) }, 'Agency deleted successfully'),
+                    onConfirm: () => save('DELETE', { entity: 'agency', id: a.id, original: a }, 'Agency deleted successfully'),
                   })}
                 />
               ))}
@@ -385,7 +403,7 @@ export default function App() {
                     <button type="button" className="iconbtn danger" aria-label={`Delete ${k}`} title={`Delete ${k}`}
                       onClick={() => setModal({
                         type: 'confirm', title: 'Delete Keyword?', message: `Are you sure you want to delete "${k}"?`,
-                        onConfirm: () => save({ ...data, keywords: data.keywords.filter((x) => x !== k) }, 'Keyword deleted successfully'),
+                        onConfirm: () => save('DELETE', { entity: 'keyword', oldValue: k }, 'Keyword deleted successfully'),
                       })}><Trash2 size={16} /></button>
                   </div>
                 </li>
@@ -482,6 +500,15 @@ export default function App() {
           {content}
         </main>
       </div>
+      <div className="wrap" style={{ marginBottom: 16 }}>
+        <details>
+          <summary style={{ cursor: 'pointer' }}>Database write access</summary>
+          <label htmlFor="edit-key" style={{ display: 'block', marginTop: 8 }}>Edit key (only needed if BIDOPS_WRITE_KEY is configured)</label>
+          <input id="edit-key" type="password" autoComplete="off" value={editKey} onChange={(e) => changeEditKey(e.target.value)}
+            placeholder="Optional database edit key" style={{ maxWidth: 360, width: '100%' }} />
+          <p className="muted small">Stored for this browser tab session only. Never include this key in public code.</p>
+        </details>
+      </div>
       <footer className="foot"><div className="wrap foot-inner"><span>© {new Date().getFullYear()} BidOps</span><span>Built by John Paul Torres</span></div></footer>
 
       {modal?.type === 'agency' && (
@@ -502,7 +529,7 @@ export default function App() {
         />
       )}
       {modal?.type === 'confirm' && <ConfirmModal title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={closeModal} />}
-      {modal?.type === 'import' && <ImportModal onClose={closeModal} onSubmit={(obj) => save(obj, 'JSON imported successfully')} />}
+      {modal?.type === 'import' && <ImportModal onClose={closeModal} onSubmit={(obj) => save('PUT', { ...obj, expectedRevision: data.revision }, 'JSON imported successfully')} />}
       {successMessage && <SuccessModal message={successMessage} onClose={() => setSuccessMessage('')} />}
 
       <div className="toasts" aria-live="polite">
